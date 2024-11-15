@@ -12,6 +12,10 @@ let bombFrequency = 2000; // Initial frequency of bombs in ms
 let lastBombTime = 0; // Tracks time since last bomb drop
 let hitEffect = false; // Trigger for hit effect
 
+const shootSound = new Audio("sounds/lazer-shot.wav"); // Load the shoot sound effect
+const hitSound = new Audio("sounds/hit.wav"); // Load the hit sound effect
+const specialEnemySound = new Audio("sounds/emergency-warning.mp3"); // Load the special enemy sound effect
+
 function resizeCanvas() {
   canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
   canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight;
@@ -118,8 +122,12 @@ function drawProjectiles() {
 }
 
 function drawBombs() {
-  ctx.fillStyle = "purple";
   bombs.forEach((bomb) => {
+    if (bomb.special) {
+      ctx.fillStyle = "blue"; // Special enemy bomb color
+    } else {
+      ctx.fillStyle = "purple"; // Regular bomb color
+    }
     ctx.beginPath();
     ctx.arc(bomb.x, bomb.y, bomb.width / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -138,12 +146,26 @@ function newPos() {
 }
 
 function moveEnemies() {
+  let hitWall = false;
+
+  // Check if any enemy hits the wall
+  enemies.forEach((enemy) => {
+    if (enemy.x + enemy.width > canvas.width || enemy.x < 0) {
+      hitWall = true;
+    }
+  });
+
+  // If any enemy hits the wall, reverse direction and move the block down
+  if (hitWall) {
+    enemies.forEach((enemy) => {
+      enemy.dx *= -1; // Reverse direction
+      enemy.y += enemyHeight; // Move down
+    });
+  }
+
+  // Move all enemies in their current direction
   enemies.forEach((enemy) => {
     enemy.x += enemy.dx;
-    if (enemy.x + enemy.width > canvas.width || enemy.x < 0) {
-      enemy.dx *= -1;
-      enemy.y += enemyHeight;
-    }
   });
 }
 
@@ -223,6 +245,7 @@ function detectCollision() {
       bombs.splice(bombIndex, 1);
       playerHealth -= 1;
       hitEffect = true;
+      hitSound.play(); // Play the hit sound effect
       setTimeout(() => (hitEffect = false), 200);
 
       if (playerHealth <= 0) {
@@ -263,17 +286,21 @@ function update() {
   drawEnemies();
   drawProjectiles();
   drawBombs();
+  drawSpecialEnemy();
   drawScore();
   newPos();
   moveEnemies();
   moveProjectiles();
   moveBombs();
+  moveSpecialEnemy();
   detectCollision();
   if (gameOver) {
     drawGameOver();
     return;
   }
   dropBombs();
+  dropSpecialEnemyBombs();
+  checkSpecialEnemyAppearance();
   requestAnimationFrame(update);
 }
 
@@ -292,13 +319,14 @@ function shoot() {
       height: 10,
     });
     projectileActive = true;
+    shootSound.play(); // Play the shoot sound effect
   }
 }
 
 function keyDown(e) {
   if (e.key === "ArrowRight" || e.key === "Right") moveRight();
   else if (e.key === "ArrowLeft" || e.key === "Left") moveLeft();
-  else if (e.key === " " || e.key === "Spacebar") shoot();
+  else if (e.key === " " || e.code === "Space") shoot();
 }
 
 function keyUp(e) {
@@ -335,3 +363,157 @@ document.addEventListener("keydown", keyDown);
 document.addEventListener("keyup", keyUp);
 startButton.addEventListener("click", startGame);
 restartButton.addEventListener("click", startGame);
+let specialEnemy = null;
+let specialEnemyLastAppearance = Date.now();
+const specialEnemyFrequency = 20000; // Minimum time between appearances in ms
+const specialEnemySpeed = 3;
+const specialEnemyInitialDelay = 10000; // Initial delay before first appearance in ms
+
+function createSpecialEnemy() {
+  specialEnemy = {
+    x: -enemyWidth,
+    y: 10,
+    width: enemyWidth,
+    height: enemyHeight,
+    dx: specialEnemySpeed,
+  };
+  specialEnemySound.play(); // Play the special enemy sound effect
+}
+function drawSpecialEnemy() {
+  if (specialEnemy) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      specialEnemy.x,
+      specialEnemy.y,
+      specialEnemy.width,
+      specialEnemy.height / 2
+    ); // Sleigh body
+
+    ctx.fillStyle = "gold";
+    ctx.fillRect(
+      specialEnemy.x + specialEnemy.width / 4,
+      specialEnemy.y - specialEnemy.height / 4,
+      specialEnemy.width / 2,
+      specialEnemy.height / 4
+    ); // Sleigh seat
+
+    ctx.fillStyle = "brown";
+    ctx.fillRect(
+      specialEnemy.x,
+      specialEnemy.y + specialEnemy.height / 2,
+      specialEnemy.width / 4,
+      specialEnemy.height / 4
+    ); // Left runner
+    ctx.fillRect(
+      specialEnemy.x + (3 * specialEnemy.width) / 4,
+      specialEnemy.y + specialEnemy.height / 2,
+      specialEnemy.width / 4,
+      specialEnemy.height / 4
+    ); // Right runner
+  }
+}
+
+function moveSpecialEnemy() {
+  if (specialEnemy) {
+    specialEnemy.x += specialEnemy.dx;
+    if (specialEnemy.x > canvas.width) {
+      specialEnemy = null;
+      specialEnemySound.pause(); // Stop the special enemy sound effect
+      specialEnemySound.currentTime = 0; // Reset the sound effect
+    }
+  }
+}
+
+function drawSpecialEnemy() {
+  if (specialEnemy) {
+    // Draw the sleigh body
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      specialEnemy.x,
+      specialEnemy.y + specialEnemy.height / 3,
+      specialEnemy.width,
+      specialEnemy.height / 3
+    );
+
+    // Draw the sleigh seat
+    ctx.fillStyle = "gold";
+    ctx.fillRect(
+      specialEnemy.x + specialEnemy.width / 4,
+      specialEnemy.y,
+      specialEnemy.width / 2,
+      specialEnemy.height / 3
+    );
+
+    // Draw the sleigh runners
+    ctx.strokeStyle = "brown";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    // Left runner
+    ctx.moveTo(specialEnemy.x, specialEnemy.y + (2 * specialEnemy.height) / 3);
+    ctx.lineTo(
+      specialEnemy.x + specialEnemy.width / 3,
+      specialEnemy.y + specialEnemy.height
+    );
+    ctx.stroke();
+    // Right runner
+    ctx.beginPath();
+    ctx.moveTo(
+      specialEnemy.x + (2 * specialEnemy.width) / 3,
+      specialEnemy.y + specialEnemy.height
+    );
+    ctx.lineTo(
+      specialEnemy.x + specialEnemy.width,
+      specialEnemy.y + (2 * specialEnemy.height) / 3
+    );
+    ctx.stroke();
+  }
+}
+
+function dropSpecialEnemyBombs() {
+  if (specialEnemy && Math.random() < 0.05) {
+    bombs.push({
+      x: specialEnemy.x + specialEnemy.width / 2,
+      y: specialEnemy.y + specialEnemy.height,
+      width: 10,
+      height: 10,
+      special: true, // Mark this bomb as a special enemy bomb
+    });
+  }
+}
+
+function checkSpecialEnemyAppearance() {
+  const currentTime = Date.now();
+  if (
+    !specialEnemy &&
+    currentTime - specialEnemyLastAppearance >
+      specialEnemyFrequency + specialEnemyInitialDelay
+  ) {
+    createSpecialEnemy();
+    specialEnemyLastAppearance = currentTime;
+  }
+}
+
+function update() {
+  if (!gameStarted) return;
+  clear();
+  drawPlayer();
+  drawEnemies();
+  drawProjectiles();
+  drawBombs();
+  drawSpecialEnemy();
+  drawScore();
+  newPos();
+  moveEnemies();
+  moveProjectiles();
+  moveBombs();
+  moveSpecialEnemy();
+  detectCollision();
+  if (gameOver) {
+    drawGameOver();
+    return;
+  }
+  dropBombs();
+  dropSpecialEnemyBombs();
+  checkSpecialEnemyAppearance();
+  requestAnimationFrame(update);
+}
