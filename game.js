@@ -7,41 +7,74 @@ let gameStarted = false;
 let gameOver = false;
 let level = 1;
 let projectileActive = false;
-let playerHealth = 4;
+let playerHealth = 5;
 let bombFrequency = 2000; // Initial frequency of bombs in ms
 let lastBombTime = 0; // Tracks time since last bomb drop
 let hitEffect = false; // Trigger for hit effect
+
+let mobile = false;
+if (window.innerWidth <= 600 || window.innerHeight <= 800) mobile = true;
 
 const shootSound = new Audio("sounds/lazer-shot.wav"); // Load the shoot sound effect
 const hitSound = new Audio("sounds/hit.wav"); // Load the hit sound effect
 const specialEnemySound = new Audio("sounds/emergency-warning.mp3"); // Load the special enemy sound effect
 
+const leftButton = document.getElementById("leftButton");
+const rightButton = document.getElementById("rightButton");
+const shootButton = document.getElementById("shootButton");
+
+if (mobile) {
+  // Touch event listeners for mobile controls
+  leftButton.addEventListener("touchstart", () => {
+    moveLeft();
+  });
+
+  rightButton.addEventListener("touchstart", () => {
+    moveRight();
+  });
+
+  shootButton.addEventListener("touchstart", () => {
+    shoot();
+  });
+
+  leftButton.addEventListener("touchend", () => {
+    player.dx = 0;
+  });
+
+  rightButton.addEventListener("touchend", () => {
+    player.dx = 0;
+  });
+} else {
+  leftButton.style.display = "none";
+  rightButton.style.display = "none";
+  shootButton.style.display = "none"; // Hide the buttons on desktop
+}
+
 function resizeCanvas() {
-  canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
-  canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight;
+  canvas.width = Math.min(window.innerWidth, 800);
+  canvas.height = Math.min(window.innerHeight-120, 600);
 }
 
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 const player = {
-  x: canvas.width / 2 - 25,
-  y: canvas.height - 60,
-  width: 50,
-  height: 60,
+  x: canvas.width / 2 - (mobile ? 20 : 25),
+  y: canvas.height - (mobile ? 48 : 60),
+  width: mobile ? 40 : 50,
+  height: mobile ? 48 : 60,
   speed: 5,
   dx: 0,
 };
-
 const enemies = [];
 const projectiles = [];
 const bombs = [];
-const enemyWidth = 50;
-const enemyHeight = 50;
-let enemySpeed = 2;
+const enemyWidth = mobile ? 30 : 50;
+const enemyHeight = mobile ? 30 : 50;
 const enemyRows = 3;
-const enemyCols = 8;
+const enemyCols = mobile ? 6 : 8;
 const projectileSpeed = 7;
+let enemySpeed = mobile ? 1.5 : 2;
 let bombSpeed = 1.5; // Slow initial bomb speed
 let score = 0;
 
@@ -160,6 +193,11 @@ function moveEnemies() {
     enemies.forEach((enemy) => {
       enemy.dx *= -1; // Reverse direction
       enemy.y += enemyHeight; // Move down
+
+      if (enemy.y + enemy.height > canvas.height) { // If enemy reaches the bottom, it's game over
+        playerHealth = 0;
+        gameOver = true;
+      }
     });
   }
 
@@ -227,9 +265,9 @@ function detectCollision() {
     if (
       player.x < enemy.x + enemy.width &&
       player.x + player.width > enemy.x &&
-      player.y < enemy.y + enemy.height &&
-      player.y + player.height > enemy.y
+      player.y < enemy.y + enemy.height
     ) {
+      playerHealth = 0;
       gameOver = true;
     }
   });
@@ -277,31 +315,7 @@ function drawGameOver() {
   ctx.font = "40px Arial";
   ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
   restartButton.style.display = "block";
-}
-
-function update() {
-  if (!gameStarted) return;
-  clear();
-  drawPlayer();
-  drawEnemies();
-  drawProjectiles();
-  drawBombs();
-  drawSpecialEnemy();
-  drawScore();
-  newPos();
-  moveEnemies();
-  moveProjectiles();
-  moveBombs();
-  moveSpecialEnemy();
-  detectCollision();
-  if (gameOver) {
-    drawGameOver();
-    return;
-  }
-  dropBombs();
-  dropSpecialEnemyBombs();
-  checkSpecialEnemyAppearance();
-  requestAnimationFrame(update);
+  projectileActive = false;
 }
 
 function moveRight() {
@@ -311,7 +325,7 @@ function moveLeft() {
   player.dx = -player.speed;
 }
 function shoot() {
-  if (!projectileActive) {
+  if (!projectileActive && !gameOver) {
     projectiles.push({
       x: player.x + player.width / 2 - 2.5,
       y: player.y,
@@ -344,10 +358,11 @@ function startGame() {
   gameOver = false;
   level = 1;
   score = 0;
-  playerHealth = 4;
-  enemySpeed = 2;
+  playerHealth = 5;
+  enemySpeed = mobile ? 1.5 : 2;
   bombFrequency = 2000;
   bombSpeed = 1.5;
+  specialEnemyLastAppearance = Date.now();
   enemies.length = 0;
   projectiles.length = 0;
   bombs.length = 0;
@@ -366,7 +381,7 @@ restartButton.addEventListener("click", startGame);
 let specialEnemy = null;
 let specialEnemyLastAppearance = Date.now();
 const specialEnemyFrequency = 20000; // Minimum time between appearances in ms
-const specialEnemySpeed = 3;
+const specialEnemySpeed = mobile ? 1.5 : 3;
 const specialEnemyInitialDelay = 10000; // Initial delay before first appearance in ms
 
 function createSpecialEnemy() {
@@ -379,49 +394,20 @@ function createSpecialEnemy() {
   };
   specialEnemySound.play(); // Play the special enemy sound effect
 }
-function drawSpecialEnemy() {
-  if (specialEnemy) {
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-      specialEnemy.x,
-      specialEnemy.y,
-      specialEnemy.width,
-      specialEnemy.height / 2
-    ); // Sleigh body
-
-    ctx.fillStyle = "gold";
-    ctx.fillRect(
-      specialEnemy.x + specialEnemy.width / 4,
-      specialEnemy.y - specialEnemy.height / 4,
-      specialEnemy.width / 2,
-      specialEnemy.height / 4
-    ); // Sleigh seat
-
-    ctx.fillStyle = "brown";
-    ctx.fillRect(
-      specialEnemy.x,
-      specialEnemy.y + specialEnemy.height / 2,
-      specialEnemy.width / 4,
-      specialEnemy.height / 4
-    ); // Left runner
-    ctx.fillRect(
-      specialEnemy.x + (3 * specialEnemy.width) / 4,
-      specialEnemy.y + specialEnemy.height / 2,
-      specialEnemy.width / 4,
-      specialEnemy.height / 4
-    ); // Right runner
-  }
-}
 
 function moveSpecialEnemy() {
   if (specialEnemy) {
     specialEnemy.x += specialEnemy.dx;
     if (specialEnemy.x > canvas.width) {
-      specialEnemy = null;
-      specialEnemySound.pause(); // Stop the special enemy sound effect
-      specialEnemySound.currentTime = 0; // Reset the sound effect
+      resetSpecialEnemy();
     }
   }
+}
+
+function resetSpecialEnemy() {
+  specialEnemy = null;
+  specialEnemySound.pause(); // Stop the special enemy sound effect
+  specialEnemySound.currentTime = 0; // Reset the sound effect
 }
 
 function drawSpecialEnemy() {
@@ -497,19 +483,20 @@ function update() {
   if (!gameStarted) return;
   clear();
   drawPlayer();
-  drawEnemies();
   drawProjectiles();
   drawBombs();
   drawSpecialEnemy();
-  drawScore();
   newPos();
   moveEnemies();
   moveProjectiles();
   moveBombs();
   moveSpecialEnemy();
   detectCollision();
+  drawEnemies();
+  drawScore();
   if (gameOver) {
     drawGameOver();
+    resetSpecialEnemy();
     return;
   }
   dropBombs();

@@ -32,6 +32,11 @@
         transition: background-color 0.3s, transform 0.3s; /* Smooth transition */
       }
 
+      #startButton, #restartButton {
+        position: absolute;
+        bottom: 100px;
+      }
+
       button:hover {
         background-color: #008000; /* Christmas green on hover */
         transform: scale(1.1); /* Slightly enlarge on hover */
@@ -50,6 +55,12 @@
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <button id="startButton">Start Game</button>
     <button id="restartButton" style="display: none">Restart Game</button>
+
+    <div id="controls" style="position: absolute; bottom: 10px; width: 100%; display: flex; justify-content: center; gap: 50px;">
+      <button id="leftButton" style="padding: 10px 20px; font-size: 18px;">&lt;</button>
+      <button id="shootButton" style="padding: 10px 20px; font-size: 18px;">Shoot</button>
+      <button id="rightButton" style="padding: 10px 20px; font-size: 18px;">&gt;</button>
+    </div>
     <script src="game.js"></script>
   </body>
 </html>
