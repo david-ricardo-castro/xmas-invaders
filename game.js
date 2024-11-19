@@ -74,7 +74,7 @@ const enemyHeight = mobile ? 30 : 50;
 const enemyRows = 3;
 const enemyCols = mobile ? 6 : 8;
 const projectileSpeed = 7;
-let enemySpeed = mobile ? 1.5 : 2;
+let enemySpeed = mobile ? 1 : 2;
 let bombSpeed = 1.5; // Slow initial bomb speed
 let score = 0;
 
@@ -359,7 +359,7 @@ function startGame() {
   level = 1;
   score = 0;
   playerHealth = 5;
-  enemySpeed = mobile ? 1.5 : 2;
+  enemySpeed = mobile ? 1 : 2;
   bombFrequency = 2000;
   bombSpeed = 1.5;
   specialEnemyLastAppearance = Date.now();
