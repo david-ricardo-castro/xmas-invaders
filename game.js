@@ -381,7 +381,7 @@ restartButton.addEventListener("click", startGame);
 let specialEnemy = null;
 let specialEnemyLastAppearance = Date.now();
 const specialEnemyFrequency = 20000; // Minimum time between appearances in ms
-const specialEnemySpeed = mobile ? 1.5 : 3;
+const specialEnemySpeed = mobile ? 1 : 3;
 const specialEnemyInitialDelay = 10000; // Initial delay before first appearance in ms
 
 function createSpecialEnemy() {
